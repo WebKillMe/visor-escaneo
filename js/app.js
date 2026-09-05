@@ -30,8 +30,12 @@
   var buckets = {};
   var current = null;   // raíz del modelo cargado
   var grid = null;
-  var home = { pos: new THREE.Vector3(), target: new THREE.Vector3() };
+  var home = { center: new THREE.Vector3(), radius: 0 };
   var planta = false;
+  var tocado = false;   // ¿ha movido el usuario la cámara?
+
+  // Dirección de la vista 3D por defecto: aérea a tres cuartos.
+  var DIR = new THREE.Vector3(0.55, 0.62, 0.66).normalize();
 
   /* ---------- escena ---------- */
 
@@ -60,6 +64,8 @@
   fill.position.set(-4, 2, -3);
   scene.add(fill);
 
+  controls.addEventListener('start', function () { tocado = true; });
+
   function resize() {
     var w = stage.clientWidth;
     var h = stage.clientHeight;
@@ -67,6 +73,9 @@
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
+    // Al girar el móvil cambia el encuadre; se recoloca salvo que el usuario
+    // ya esté navegando por su cuenta.
+    if (!tocado) reset();
   }
   window.addEventListener('resize', resize);
 
@@ -209,10 +218,11 @@
     pintarLeyenda();
     CATS.forEach(aplicar);
 
-    var r = Math.max(size.x, size.z, size.y);
-    home.target.set(0, size.y * 0.35, 0);
-    home.pos.set(r * 0.62, size.y * 2.1, r * 0.72);
-    home.alto = r * 1.05;
+    // Encuadre por esfera envolvente: así entra entero tanto en pantalla
+    // apaisada como en el móvil en vertical, donde manda el ancho.
+    home.center.set(0, size.y / 2, 0);
+    home.radius = 0.5 * Math.sqrt(size.x * size.x + size.y * size.y + size.z * size.z);
+    tocado = false;
     reset();
 
     var l = document.getElementById('loading');
@@ -222,15 +232,30 @@
 
   /* ---------- cámara ---------- */
 
+  // Distancia a la que la esfera envolvente cabe entera, mirando el lado
+  // más estrecho del encuadre (en vertical, el horizontal).
+  function distancia() {
+    var fovV = camera.fov * Math.PI / 180;
+    var fovH = 2 * Math.atan(Math.tan(fovV / 2) * camera.aspect);
+    return (home.radius / Math.sin(Math.min(fovV, fovH) / 2)) * 1.06;
+  }
+
   function reset() {
+    if (!home.radius) return;
+    var d = distancia();
     if (planta) {
-      camera.position.set(0.001, home.alto || 12, 0);
+      camera.position.set(0.001, home.center.y + d, 0);
       controls.target.set(0, 0, 0);
     } else {
-      camera.position.copy(home.pos);
-      controls.target.copy(home.target);
+      camera.position.set(
+        home.center.x + DIR.x * d,
+        home.center.y + DIR.y * d,
+        home.center.z + DIR.z * d
+      );
+      controls.target.copy(home.center);
     }
     controls.update();
+    tocado = false;
   }
 
   document.getElementById('btn-reset').addEventListener('click', reset);
@@ -273,15 +298,29 @@
     l.textContent = msg;
   }
 
-  loader.load(
-    MODELO.url,
-    function (gltf) { montar(gltf.scene, MODELO.titulo, MODELO.fuente); },
-    null,
-    function (err) {
+  // Compilado con el modelo dentro (página suelta, sin servidor): se parsea de memoria.
+  // Si no, se pide el .glb a models/ como cualquier otro recurso.
+  if (window.MODELO_GLB_B64) {
+    var bin = atob(window.MODELO_GLB_B64);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    loader.parse(bytes.buffer, '', function (gltf) {
+      montar(gltf.scene, MODELO.titulo, MODELO.fuente);
+    }, function (err) {
       console.error(err);
-      fallo('NO SE PUDO CARGAR ' + MODELO.url + ' — ARRASTRA UN .GLB AQUÍ');
-    }
-  );
+      fallo('NO SE PUDO LEER EL MODELO INCRUSTADO');
+    });
+  } else {
+    loader.load(
+      MODELO.url,
+      function (gltf) { montar(gltf.scene, MODELO.titulo, MODELO.fuente); },
+      null,
+      function (err) {
+        console.error(err);
+        fallo('NO SE PUDO CARGAR ' + MODELO.url + ' — ARRASTRA UN .GLB AQUÍ');
+      }
+    );
+  }
 
   /* ---------- arrastrar y soltar ---------- */
 
