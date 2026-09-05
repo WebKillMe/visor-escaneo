@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visor de escaneos · Polycam</title>
+<meta name="description" content="Visor 3D de escaneos LiDAR de Polycam: orbita la planta y enciende o apaga muros, puertas, ventanas, suelos y techos.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="shell">
+  <aside class="rail">
+    <header>
+      <div class="eyebrow">Polycam · escaneo LiDAR</div>
+      <h1 id="model-title">Planta completa</h1>
+      <div class="source" id="model-source">cargando…</div>
+    </header>
+
+    <section class="measures">
+      <div class="measure"><span class="k">Largo</span><span class="v" id="m-x">—</span></div>
+      <div class="measure"><span class="k">Fondo</span><span class="v" id="m-z">—</span></div>
+      <div class="measure"><span class="k">Altura libre</span><span class="v" id="m-y">—</span></div>
+      <div class="measure"><span class="k">Suelo</span><span class="v" id="m-a">—</span></div>
+      <div class="measure"><span class="k">Elementos</span><span class="v" id="m-n">—</span></div>
+      <div class="measure"><span class="k">Triángulos</span><span class="v" id="m-t">—</span></div>
+    </section>
+
+    <section class="legend">
+      <div class="eyebrow">Elementos del escaneo</div>
+      <div id="cats"></div>
+      <div class="modes">
+        <button class="mode" id="mode-cat" aria-pressed="true">Categorías</button>
+        <button class="mode" id="mode-raw" aria-pressed="false">Colores Polycam</button>
+      </div>
+    </section>
+
+    <section class="rail-foot">
+      <p class="note">Polycam clasifica la geometría mientras escanea: cada muro, puerta y ventana llega ya nombrado (<code>Wall_0</code>, <code>Window_3</code>…). Esa clasificación es la que colorea este visor.</p>
+      <p class="note"><strong>Arrastra otro .glb</strong> sobre la vista para abrirlo. No se sube a ningún sitio: se lee en tu navegador.</p>
+    </section>
+  </aside>
+
+  <main class="stage" id="stage">
+    <div class="loading" id="loading">CARGANDO MALLA…</div>
+    <div class="hud">
+      <span id="hud-grid">Cuadrícula 0,5 m · unidades en metros</span>
+      <span>Arrastrar: girar · Rueda: zoom · Clic derecho: desplazar</span>
+    </div>
+    <div class="tools">
+      <button class="tool" id="btn-plan" aria-pressed="false">Planta</button>
+      <button class="tool" id="btn-spin" aria-pressed="false">Girar</button>
+      <button class="tool" id="btn-reset">Reiniciar vista</button>
+    </div>
+    <div class="dropzone" id="dropzone"><span>Suelta el .glb para abrirlo</span></div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
