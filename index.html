@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Visor de escaneos · Polycam</title>
-<meta name="description" content="Visor 3D de escaneos LiDAR de Polycam: orbita la planta y enciende o apaga muros, puertas, ventanas, suelos y techos.">
+<meta name="description" content="Visor 3D de escaneos LiDAR de Polycam: orbita la planta, aísla muros, puertas y ventanas, y coloca muebles de medidas estándar para ver si caben.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📐</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,34 +15,96 @@
 
 <div class="shell">
   <aside class="rail">
-    <header>
+
+    <header class="bloque">
       <div class="eyebrow">Polycam · escaneo LiDAR</div>
       <h1 id="model-title">Planta completa</h1>
       <div class="source" id="model-source">cargando…</div>
     </header>
 
-    <section class="measures">
-      <div class="measure"><span class="k">Largo</span><span class="v" id="m-x">—</span></div>
-      <div class="measure"><span class="k">Fondo</span><span class="v" id="m-z">—</span></div>
-      <div class="measure"><span class="k">Altura libre</span><span class="v" id="m-y">—</span></div>
-      <div class="measure"><span class="k">Suelo</span><span class="v" id="m-a">—</span></div>
-      <div class="measure"><span class="k">Elementos</span><span class="v" id="m-n">—</span></div>
-      <div class="measure"><span class="k">Triángulos</span><span class="v" id="m-t">—</span></div>
-    </section>
+    <nav class="tabs">
+      <button class="tab" id="tab-escaneo" aria-pressed="true">Escaneo</button>
+      <button class="tab" id="tab-muebles" aria-pressed="false">Muebles</button>
+    </nav>
 
-    <section class="legend">
-      <div class="eyebrow">Elementos del escaneo</div>
-      <div id="cats"></div>
-      <div class="modes">
-        <button class="mode" id="mode-cat" aria-pressed="true">Categorías</button>
-        <button class="mode" id="mode-raw" aria-pressed="false">Colores Polycam</button>
-      </div>
-    </section>
+    <!-- ---------------- escaneo ---------------- -->
 
-    <section class="rail-foot">
-      <p class="note">Polycam clasifica la geometría mientras escanea: cada muro, puerta y ventana llega ya nombrado (<code>Wall_0</code>, <code>Window_3</code>…). Esa clasificación es la que colorea este visor.</p>
-      <p class="note"><strong>Arrastra otro .glb</strong> sobre la vista para abrirlo. No se sube a ningún sitio: se lee en tu navegador.</p>
-    </section>
+    <div class="panel" id="panel-escaneo">
+      <section class="bloque measures">
+        <div class="measure"><span class="k">Largo</span><span class="v" id="m-x">—</span></div>
+        <div class="measure"><span class="k">Fondo</span><span class="v" id="m-z">—</span></div>
+        <div class="measure"><span class="k">Altura libre</span><span class="v" id="m-y">—</span></div>
+        <div class="measure"><span class="k">Suelo</span><span class="v" id="m-a">—</span></div>
+        <div class="measure"><span class="k">Elementos</span><span class="v" id="m-n">—</span></div>
+        <div class="measure"><span class="k">Triángulos</span><span class="v" id="m-t">—</span></div>
+      </section>
+
+      <section class="bloque legend">
+        <div class="eyebrow">Elementos del escaneo</div>
+        <div id="cats"></div>
+        <div class="modes">
+          <button class="mode" id="mode-cat" aria-pressed="true">Categorías</button>
+          <button class="mode" id="mode-raw" aria-pressed="false">Colores Polycam</button>
+        </div>
+      </section>
+
+      <section class="bloque rail-foot">
+        <p class="note">Polycam clasifica la geometría mientras escanea: cada muro, puerta y ventana llega ya nombrado (<code>Wall_0</code>, <code>Window_3</code>…). Esa clasificación es la que colorea este visor.</p>
+        <p class="note"><strong>Arrastra otro .glb</strong> sobre la vista para abrirlo. No se sube a ningún sitio: se lee en tu navegador.</p>
+      </section>
+    </div>
+
+    <!-- ---------------- muebles ---------------- -->
+
+    <div class="panel" id="panel-muebles" hidden>
+      <section class="bloque mb-barra">
+        <div class="mb-cuenta"><span id="mb-total">0</span> piezas colocadas</div>
+        <div class="mb-barra-btns">
+          <button class="tool" id="mb-ver" aria-pressed="true">Ver</button>
+          <button class="tool" id="mb-vaciar">Vaciar</button>
+        </div>
+        <p class="aviso" id="mb-aviso" hidden></p>
+      </section>
+
+      <section class="bloque" id="mb-props" hidden>
+        <div class="eyebrow">Pieza seleccionada</div>
+        <div class="mb-nombre" id="mb-nombre">—</div>
+
+        <div class="mb-medidas">
+          <label class="mb-campo"><span>Ancho</span><input type="number" id="mb-w" min="5" max="1200" step="1"><span class="mb-u">cm</span></label>
+          <label class="mb-campo"><span>Fondo</span><input type="number" id="mb-d" min="5" max="1200" step="1"><span class="mb-u">cm</span></label>
+          <label class="mb-campo"><span>Alto</span><input type="number" id="mb-h" min="1" max="400" step="1"><span class="mb-u">cm</span></label>
+          <label class="mb-campo"><span>Giro</span><input type="number" id="mb-rot" min="0" max="359" step="1"><span class="mb-u">°</span></label>
+        </div>
+
+        <div class="mb-acciones">
+          <button class="tool" id="mb-rot-menos">↺ 45°</button>
+          <button class="tool" id="mb-rot-mas">↻ 45°</button>
+          <button class="tool" id="mb-dup">Duplicar</button>
+          <button class="tool" id="mb-del">Borrar</button>
+        </div>
+      </section>
+
+      <section class="bloque">
+        <div class="eyebrow">Colocadas</div>
+        <div class="mb-lista" id="mb-lista"></div>
+      </section>
+
+      <section class="bloque">
+        <div class="eyebrow">Añadir</div>
+        <div id="mb-catalogo"></div>
+      </section>
+
+      <section class="bloque" id="sec-exportar">
+        <div class="eyebrow">Exportar</div>
+        <div class="mb-acciones">
+          <button class="tool" id="mb-glb">Exportar .glb</button>
+          <button class="tool" id="mb-csv">Exportar .csv</button>
+        </div>
+        <p class="note">El <strong>.glb</strong> lleva el escaneo y los muebles juntos. El <strong>.csv</strong> lista cada pieza con sus medidas y su posición en metros, con el origen en el centro de la planta.</p>
+      </section>
+    </div>
+
   </aside>
 
   <main class="stage" id="stage">
@@ -63,6 +125,9 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+<script src="js/catalogo.js"></script>
+<script src="js/muebles.js"></script>
 <script src="js/app.js"></script>
 
 </body>

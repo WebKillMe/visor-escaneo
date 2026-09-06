@@ -222,31 +222,91 @@
     // apaisada como en el móvil en vertical, donde manda el ancho.
     home.center.set(0, size.y / 2, 0);
     home.radius = 0.5 * Math.sqrt(size.x * size.x + size.y * size.y + size.z * size.z);
+    home.radioXZ = 0.5 * Math.sqrt(size.x * size.x + size.z * size.z);
     tocado = false;
     reset();
+
+    root.updateMatrixWorld(true);
+    murosEnPlanta();
 
     var l = document.getElementById('loading');
     if (l) l.remove();
     resize();
+
+    if (window.MUEBLES) window.MUEBLES.modeloNuevo();
   }
+
+  /* ---------- huella de los muros en planta ----------
+     Para el imán y la detección de choques del mobiliario hace falta saber
+     dónde están los muros vistos desde arriba. Cada muro es una caja girada
+     sobre el eje Y, así que sus 8 esquinas proyectadas en XZ forman un
+     rectángulo; ordenándolas por ángulo alrededor del centro sale el polígono. */
+
+  var muros = [];
+  var murosPoly = [];
+
+  function murosEnPlanta() {
+    muros = (buckets.wall || []).concat(buckets.joint || []);
+    murosPoly = [];
+
+    muros.forEach(function (m) {
+      if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+      var bb = m.geometry.boundingBox;
+      var pts = [];
+      for (var i = 0; i < 8; i++) {
+        var v = new THREE.Vector3(
+          (i & 1) ? bb.max.x : bb.min.x,
+          (i & 2) ? bb.max.y : bb.min.y,
+          (i & 4) ? bb.max.z : bb.min.z
+        ).applyMatrix4(m.matrixWorld);
+        pts.push([v.x, v.z]);
+      }
+
+      var cx = 0, cz = 0;
+      pts.forEach(function (p) { cx += p[0]; cz += p[1]; });
+      cx /= pts.length;
+      cz /= pts.length;
+      pts.sort(function (a, b) {
+        return Math.atan2(a[1] - cz, a[0] - cx) - Math.atan2(b[1] - cz, b[0] - cx);
+      });
+      murosPoly.push(pts);
+    });
+
+    API.muros = muros;
+    API.murosPoly = murosPoly;
+  }
+
+  // Lo que la capa de mobiliario necesita del visor.
+  var API = {
+    scene: scene,
+    camera: camera,
+    renderer: renderer,
+    controls: controls,
+    stage: stage,
+    muros: [],
+    murosPoly: [],
+    modelo: function () { return current; }
+  };
+  window.VISOR = API;
 
   /* ---------- cámara ---------- */
 
   // Distancia a la que la esfera envolvente cabe entera, mirando el lado
   // más estrecho del encuadre (en vertical, el horizontal).
-  function distancia() {
+  function distancia(radio) {
     var fovV = camera.fov * Math.PI / 180;
     var fovH = 2 * Math.atan(Math.tan(fovV / 2) * camera.aspect);
-    return (home.radius / Math.sin(Math.min(fovV, fovH) / 2)) * 1.06;
+    return (radio / Math.sin(Math.min(fovV, fovH) / 2)) * 1.06;
   }
 
   function reset() {
     if (!home.radius) return;
-    var d = distancia();
     if (planta) {
-      camera.position.set(0.001, home.center.y + d, 0);
+      // Desde arriba solo cuenta la huella; la altura no ocupa encuadre.
+      camera.position.set(0.001, distancia(home.radioXZ), 0);
       controls.target.set(0, 0, 0);
     } else {
+      var d = distancia(home.radius);
       camera.position.set(
         home.center.x + DIR.x * d,
         home.center.y + DIR.y * d,
@@ -357,6 +417,19 @@
   });
 
   /* ---------- bucle ---------- */
+
+  /* ---------- pestañas del panel ---------- */
+
+  function pestana(cual) {
+    document.getElementById('tab-escaneo').setAttribute('aria-pressed', String(cual === 'escaneo'));
+    document.getElementById('tab-muebles').setAttribute('aria-pressed', String(cual === 'muebles'));
+    document.getElementById('panel-escaneo').hidden = cual !== 'escaneo';
+    document.getElementById('panel-muebles').hidden = cual !== 'muebles';
+  }
+  document.getElementById('tab-escaneo').addEventListener('click', function () { pestana('escaneo'); });
+  document.getElementById('tab-muebles').addEventListener('click', function () { pestana('muebles'); });
+
+  if (window.MUEBLES) window.MUEBLES.init(API);
 
   resize();
 
