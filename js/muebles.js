@@ -36,29 +36,51 @@
   }
 
   function crear(estado) {
-    var geo = estado.forma === 'cilindro' ? geoCil : geoCaja;
+    var obj;
+    var mats = [];
+    var origs = [];
+    var vcs = [];
 
-    var mat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(COLOR),
-      roughness: 0.7,
-      metalness: 0.0,
-      flatShading: estado.forma !== 'cilindro'
-    });
+    var tpl = estado.lib ? plantilla(estado.lib) : null;
 
-    var m = new THREE.Mesh(geo, mat);
-    m.userData.es = estado;
-    m.userData.mat = mat;
+    if (tpl) {
+      // Pieza real de la biblioteca: se clona y se le clonan los materiales,
+      // para poder teñirla al seleccionarla sin tocar la plantilla.
+      obj = tpl.clone(true);
+      obj.traverse(function (o) {
+        if (!o.isMesh) return;
+        o.material = o.material.clone();
+        mats.push(o.material);
+        origs.push(o.material.color.getHex());
+        vcs.push(!!o.material.vertexColors);
+      });
+    } else {
+      var geo = estado.forma === 'cilindro' ? geoCil : geoCaja;
+      var mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(COLOR),
+        roughness: 0.7,
+        metalness: 0.0,
+        flatShading: estado.forma !== 'cilindro'
+      });
+      obj = new THREE.Mesh(geo, mat);
+      obj.add(new THREE.LineSegments(
+        new THREE.EdgesGeometry(geo),
+        new THREE.LineBasicMaterial({ color: 0x0A0D11, transparent: true, opacity: 0.45 })
+      ));
+      mats.push(mat);
+      origs.push(COLOR);
+      vcs.push(false);
+    }
 
-    var borde = new THREE.LineSegments(
-      new THREE.EdgesGeometry(geo),
-      new THREE.LineBasicMaterial({ color: 0x0A0D11, transparent: true, opacity: 0.45 })
-    );
-    m.add(borde);
+    obj.userData.es = estado;
+    obj.userData.mats = mats;
+    obj.userData.origs = origs;
+    obj.userData.vcs = vcs;
 
-    grupo.add(m);
-    piezas.push(m);
-    aplicarEstado(m);
-    return m;
+    grupo.add(obj);
+    piezas.push(obj);
+    aplicarEstado(obj);
+    return obj;
   }
 
   function aplicarEstado(m) {
@@ -74,6 +96,7 @@
       tipo: def.id,
       nombre: def.nombre,
       forma: def.forma || 'caja',
+      lib: def.lib || null,
       w: def.w, d: def.d, h: def.h,
       base: def.base || 0,
       x: 0, z: 0, rot: 0
@@ -120,6 +143,112 @@
       if (solapan(poly, muros[j])) return false;
     }
     return true;
+  }
+
+  /* ---------- biblioteca de piezas reales ----------
+     Un .ifc o un .glb de un mueble concreto. Se normaliza a una caja de 1×1×1
+     centrada en el origen, y a partir de ahí vale exactamente la misma
+     aritmética de escala, imán y choques que para las cajas del catálogo:
+     escalarla por sus centímetros reales la devuelve a su tamaño de verdad. */
+
+  var biblioteca = [];
+
+  function plantilla(id) {
+    for (var i = 0; i < biblioteca.length; i++) {
+      if (biblioteca[i].id === id) return biblioteca[i].tpl;
+    }
+    return null;
+  }
+
+  function normalizar(objeto) {
+    var caja = new THREE.Box3().setFromObject(objeto);
+    var tam = caja.getSize(new THREE.Vector3());
+    var mid = caja.getCenter(new THREE.Vector3());
+
+    // Un modelo plano en algún eje reventaría la división.
+    tam.x = tam.x || 0.001;
+    tam.y = tam.y || 0.001;
+    tam.z = tam.z || 0.001;
+
+    objeto.scale.set(1 / tam.x, 1 / tam.y, 1 / tam.z);
+    objeto.position.set(-mid.x / tam.x, -mid.y / tam.y, -mid.z / tam.z);
+
+    var tpl = new THREE.Group();
+    tpl.add(objeto);
+    return { tpl: tpl, tam: tam };
+  }
+
+  function registrar(nombreArchivo, objeto, fuente) {
+    var n = normalizar(objeto);
+    var id = nombreArchivo;
+
+    // Si ya había una con ese nombre, se sustituye.
+    for (var i = 0; i < biblioteca.length; i++) {
+      if (biblioteca[i].id === id) { biblioteca.splice(i, 1); break; }
+    }
+
+    biblioteca.push({
+      id: id,
+      nombre: nombreArchivo.replace(/\.(ifc|glb|gltf)$/i, ''),
+      fuente: fuente,
+      tpl: n.tpl,
+      w: Math.max(1, Math.round(n.tam.x * 100)),
+      h: Math.max(1, Math.round(n.tam.y * 100)),
+      d: Math.max(1, Math.round(n.tam.z * 100))
+    });
+
+    pintarBiblioteca();
+    return id;
+  }
+
+  function cargarPieza(file) {
+    var estado = document.getElementById('mb-estado');
+    var esIfc = /\.ifc$/i.test(file.name);
+
+    if (estado) {
+      estado.hidden = false;
+      estado.textContent = esIfc
+        ? 'Leyendo ' + file.name + '… la primera vez descarga el motor IFC (6 MB)'
+        : 'Leyendo ' + file.name + '…';
+    }
+
+    return file.arrayBuffer().then(function (buf) {
+      if (esIfc) {
+        return window.IFC.cargar(buf).then(function (r) {
+          if (!r.elementos) throw new Error('sin geometría');
+          return r.grupo;
+        });
+      }
+      return new Promise(function (ok, mal) {
+        new THREE.GLTFLoader().parse(buf, '', function (g) { ok(g.scene); }, mal);
+      });
+    }).then(function (objeto) {
+      registrar(file.name, objeto, esIfc ? 'IFC' : 'glTF');
+      if (estado) estado.hidden = true;
+    }).catch(function (err) {
+      console.error(err);
+      if (estado) estado.textContent = 'No se pudo leer ' + file.name;
+    });
+  }
+
+  function pintarBiblioteca() {
+    var host = document.getElementById('mb-biblioteca');
+    if (!host) return;
+    host.innerHTML = '';
+
+    biblioteca.forEach(function (p) {
+      var b = document.createElement('button');
+      b.className = 'mb-add mb-add-real';
+      b.innerHTML = '<span class="mb-add-n"></span><span class="mb-add-med"></span>';
+      b.querySelector('.mb-add-n').textContent = p.nombre;
+      b.querySelector('.mb-add-med').textContent = p.fuente + ' · ' + p.w + '×' + p.d + '×' + p.h;
+      b.addEventListener('click', function () {
+        nuevaDesdeCatalogo({
+          id: p.id, nombre: p.nombre, w: p.w, d: p.d, h: p.h, lib: p.id
+        });
+      });
+      host.appendChild(b);
+    });
   }
 
   /* ---------- geometría 2D: rectángulos y solapes ---------- */
@@ -208,9 +337,20 @@
   }
 
   function pintar(m) {
-    var c = m === sel ? COLOR_SEL : (m.userData.choca ? COLOR_MAL : COLOR);
-    m.userData.mat.color.setHex(c);
-    m.userData.mat.emissive.setHex(m === sel ? 0x0E2A30 : 0x000000);
+    var tinte = m === sel ? COLOR_SEL : (m.userData.choca ? COLOR_MAL : null);
+    var mats = m.userData.mats;
+    for (var i = 0; i < mats.length; i++) {
+      if (tinte === null) {
+        mats[i].color.setHex(m.userData.origs[i]);
+        mats[i].vertexColors = m.userData.vcs[i];
+      } else {
+        // Un color plano manda sobre los colores por vértice del IFC.
+        mats[i].color.setHex(tinte);
+        mats[i].vertexColors = false;
+      }
+      mats[i].emissive.setHex(m === sel ? 0x0E2A30 : 0x000000);
+      mats[i].needsUpdate = true;
+    }
   }
 
   /* ---------- imán a los muros ---------- */
@@ -292,9 +432,9 @@
 
   function borrar() {
     if (!sel) return;
-    // La geometría es compartida por todas las piezas: no se destruye aquí.
+    // La geometría es compartida con la plantilla: solo se sueltan los materiales.
     grupo.remove(sel);
-    sel.userData.mat.dispose();
+    sel.userData.mats.forEach(function (m) { m.dispose(); });
     piezas.splice(piezas.indexOf(sel), 1);
     seleccionar(null);
     revisarChoques();
@@ -335,14 +475,17 @@
     if (!grupo.visible || ev.button === 2) return;
     ndc(ev);
     ray.setFromCamera(puntero, V.camera);
-    var hits = ray.intersectObjects(piezas, false);
+    var hits = ray.intersectObjects(piezas, true);
 
-    if (!hits.length) {
+    // Las piezas de la biblioteca son grupos: se sube hasta la raíz de la pieza.
+    var m = hits.length ? hits[0].object : null;
+    while (m && piezas.indexOf(m) === -1) m = m.parent;
+
+    if (!m) {
       if (sel) seleccionar(null);
       return;
     }
 
-    var m = hits[0].object;
     seleccionar(m);
 
     var p = suelo(ev);
@@ -408,12 +551,24 @@
     try { datos = JSON.parse(raw); } catch (err) { return; }
     if (!Array.isArray(datos)) return;
 
+    var huerfanas = 0;
     datos.forEach(function (e) {
       if (!e || typeof e.w !== 'number') return;
       contador++;
       e.id = 'p' + contador;
+      // Las piezas de la biblioteca vienen de archivos tuyos, que no se guardan:
+      // al volver se recuperan como caja con sus medidas hasta que los cargues.
+      if (e.lib && !plantilla(e.lib)) huerfanas++;
       crear(e);
     });
+
+    var estado = document.getElementById('mb-estado');
+    if (huerfanas && estado) {
+      estado.hidden = false;
+      estado.textContent = huerfanas === 1
+        ? '1 pieza de biblioteca se muestra como caja: vuelve a cargar su archivo'
+        : huerfanas + ' piezas de biblioteca se muestran como caja: vuelve a cargar sus archivos';
+    }
     revisarChoques();
     inventario();
   }
@@ -548,6 +703,15 @@
       on('mb-csv', 'click', exportarCSV);
       on('mb-glb', 'click', exportarGLB);
       on('mb-vaciar', 'click', vaciar);
+
+      on('file-mueble', 'change', function (ev) {
+        var files = Array.prototype.slice.call(ev.target.files);
+        ev.target.value = '';
+        // De una en una: web-ifc no es reentrante.
+        files.reduce(function (cadena, f) {
+          return cadena.then(function () { return cargarPieza(f); });
+        }, Promise.resolve());
+      });
 
       var ver = document.getElementById('mb-ver');
       on('mb-ver', 'click', function () {

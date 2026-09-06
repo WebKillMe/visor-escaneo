@@ -364,6 +364,41 @@ h1 {
   color: var(--dim);
 }
 
+/* Las piezas reales de la biblioteca se distinguen de las cajas del catálogo. */
+.mb-add-real { border-color: #3A5148; }
+.mb-add-real:hover { border-color: #6F8F7B; }
+.mb-add-real .mb-add-med { color: #7E9A8B; }
+
+/* ---------- abrir archivos ---------- */
+
+.abrir {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.abrir .tool { background: var(--void); }
+
+label.tool { display: inline-block; }
+
+.abrir-nota {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+}
+
+.estado {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 7px 10px;
+  border-left: 2px solid var(--focus);
+  background: rgba(78, 179, 196, .08);
+  color: #9FD3DC;
+  font-size: 12px;
+}
+
 /* ---------- vista ---------- */
 
 .stage { position: relative; background: var(--void); overflow: hidden; }

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=8">
 </head>
 <body>
 
@@ -17,9 +17,14 @@
   <aside class="rail">
 
     <header class="bloque">
-      <div class="eyebrow">Polycam · escaneo LiDAR</div>
+      <div class="eyebrow" id="model-origen">Polycam · escaneo LiDAR</div>
       <h1 id="model-title">Planta completa</h1>
       <div class="source" id="model-source">cargando…</div>
+      <div class="abrir" id="abrir-modelo">
+        <label class="tool" for="file-modelo">Abrir modelo</label>
+        <input type="file" id="file-modelo" accept=".ifc,.glb,.gltf" hidden>
+        <span class="abrir-nota">.ifc · .glb</span>
+      </div>
     </header>
 
     <nav class="tabs">
@@ -50,7 +55,7 @@
 
       <section class="bloque rail-foot">
         <p class="note">Polycam clasifica la geometría mientras escanea: cada muro, puerta y ventana llega ya nombrado (<code>Wall_0</code>, <code>Window_3</code>…). Esa clasificación es la que colorea este visor.</p>
-        <p class="note"><strong>Arrastra otro .glb</strong> sobre la vista para abrirlo. No se sube a ningún sitio: se lee en tu navegador.</p>
+        <p class="note">Con <strong>Abrir modelo</strong> se cambia el escaneo por otro <code>.glb</code> de Polycam o por un <code>.ifc</code> modelado en Revit, que se clasifica por clase IFC en vez de por nombre. Nada se sube a ningún sitio: se lee en tu navegador.</p>
       </section>
     </div>
 
@@ -64,6 +69,7 @@
           <button class="tool" id="mb-vaciar">Vaciar</button>
         </div>
         <p class="aviso" id="mb-aviso" hidden></p>
+        <p class="estado" id="mb-estado" hidden></p>
       </section>
 
       <section class="bloque" id="mb-props" hidden>
@@ -90,8 +96,18 @@
         <div class="mb-lista" id="mb-lista"></div>
       </section>
 
+      <section class="bloque" id="sec-biblioteca">
+        <div class="eyebrow">Biblioteca</div>
+        <p class="note">Piezas reales en <strong>.ifc</strong> o <strong>.glb</strong>, con su geometría y sus medidas de verdad. Se leen en tu navegador.</p>
+        <div class="abrir">
+          <label class="tool" for="file-mueble">Añadir pieza</label>
+          <input type="file" id="file-mueble" accept=".ifc,.glb,.gltf" multiple hidden>
+        </div>
+        <div class="mb-rejilla" id="mb-biblioteca"></div>
+      </section>
+
       <section class="bloque">
-        <div class="eyebrow">Añadir</div>
+        <div class="eyebrow">Cajas de medida estándar</div>
         <div id="mb-catalogo"></div>
       </section>
 
@@ -118,7 +134,7 @@
       <button class="tool" id="btn-spin" aria-pressed="false">Girar</button>
       <button class="tool" id="btn-reset">Reiniciar vista</button>
     </div>
-    <div class="dropzone" id="dropzone"><span>Suelta el .glb para abrirlo</span></div>
+    <div class="dropzone" id="dropzone"><span>Suelta el .ifc o el .glb para abrirlo</span></div>
   </main>
 </div>
 
@@ -126,9 +142,10 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
-<script src="js/catalogo.js"></script>
-<script src="js/muebles.js"></script>
-<script src="js/app.js"></script>
+<script src="js/catalogo.js?v=8"></script>
+<script src="js/ifc.js?v=8"></script>
+<script src="js/muebles.js?v=8"></script>
+<script src="js/app.js?v=8"></script>
 
 </body>
 </html>

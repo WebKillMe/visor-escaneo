@@ -51,15 +51,53 @@ Merece la pena dejarlas escritas porque no son evidentes:
 2. **Las texturas son de adorno.** Son PNGs de 4 píxeles, uno por material, es decir colores
    planos. No hay textura real que perder al convertir.
 
+## IFC
+
+El visor no es solo para escaneos. Con **Abrir modelo** se puede cargar un `.ifc`
+modelado en Revit y el visor lo clasifica por **clase IFC** en vez de por nombre:
+`IfcWall`, `IfcDoor`, `IfcWindow`, `IfcSlab`, `IfcStair`, `IfcSanitaryTerminal`,
+`IfcFurnishingElement`… Las mismas categorías, las mismas medidas, los mismos muebles.
+
+Lo lee [web-ifc](https://github.com/ThatOpen/engine_web-ifc) compilado a WebAssembly,
+que se descarga solo la primera vez que abres un IFC (unos 6 MB entre el javascript y el
+wasm). El archivo no sale de tu navegador.
+
+Dos detalles que costaron encontrar:
+
+1. **Con `COORDINATE_TO_ORIGIN` los ejes ya vienen con Y arriba.** Esa opción centra el
+   modelo *y* aplica la matriz de coordinación. Girar -90° sobre X «para pasar de Z arriba
+   a Y arriba», que es lo que pide el IFC en crudo, deja el modelo tumbado del revés.
+2. **Los colores del IFC se guardan como color por vértice**, porque un elemento puede
+   traer varias geometrías con materiales distintos y aquí se funden en una sola malla
+   por elemento.
+
+`models/ejemplo.ifc` es una vivienda de juguete generada por
+`tools/generar_ifc_ejemplo.py` para poder probar todo esto sin abrir Revit.
+
+## Biblioteca de muebles reales
+
+Además de las cajas de medidas estándar, en la pestaña Muebles se pueden cargar piezas
+reales en `.ifc` o `.glb` —de BIMobject, Polantis, del fabricante o exportadas de tu
+propio Revit— y colocarlas con su geometría de verdad. El visor las mide solas y las
+normaliza a una caja de 1×1×1, así que el imán, los choques y el panel de medidas
+funcionan igual que con las cajas.
+
+Las piezas de la biblioteca salen de archivos tuyos y no se guardan en el navegador: al
+volver, una pieza colocada se recupera como caja con sus medidas hasta que vuelvas a
+cargar su archivo.
+
 ## Estructura
 
 ```
 index.html                     marcado
 css/style.css                  estilos
-js/app.js                      escena, clasificación del escaneo y medidas
+js/app.js                      escena, clasificación y medidas
+js/ifc.js                      lectura de .ifc con web-ifc
 js/catalogo.js                 medidas estándar del mobiliario
 js/muebles.js                  colocar, girar, imán, choques y exportar
 models/planta-2026-09-05.glb   el escaneo que se carga al abrir
+models/ejemplo.ifc             vivienda de juguete para probar la parte IFC
+tools/generar_ifc_ejemplo.py   la genera
 ```
 
 Three.js r128 se carga desde jsDelivr; no hay build ni dependencias que instalar.

@@ -1,27 +1,60 @@
-/* Visor de escaneos LiDAR de Polycam.
-   Lee el .glb tal y como lo exporta Polycam y lo colorea por categorías
-   usando los nombres de nodo (Wall_0, Window_3, Door_2, toilet...). */
+/* Visor de modelos de vivienda.
+
+   Lee dos cosas distintas y las clasifica cada una a su manera:
+   - el .glb que exporta Polycam de un escaneo LiDAR, por nombre de nodo
+     (Wall_0, Window_3, Door_2, toilet...);
+   - un .ifc modelado en Revit o similar, por clase IFC (IfcWall, IfcDoor...).
+
+   El resto del visor —medidas, categorías, muebles— es común a los dos. */
 
 (function () {
   'use strict';
 
-  // Modelo que se carga al abrir. Para añadir otro, déjalo en models/ y cambia esta ruta.
+  // Modelo que se carga al abrir. Para cambiarlo, déjalo en models/ y toca esta ruta.
   var MODELO = {
     url: 'models/planta-2026-09-05.glb',
     titulo: 'Planta completa',
-    fuente: '5_9_2026.glb · escaneado el 5 sep 2026'
+    fuente: '5_9_2026.glb · escaneado el 5 sep 2026',
+    origen: 'Polycam · escaneo LiDAR'
   };
 
-  var CATS = [
-    { id: 'wall',   label: 'Muros',    color: '#BFC8D2', on: true,  test: function (n) { return /^Wall_/i.test(n); } },
-    { id: 'joint',  label: 'Uniones',  color: '#6E7B88', on: true,  test: function (n) { return /^Joint_/i.test(n); } },
-    { id: 'door',   label: 'Puertas',  color: '#D98B45', on: true,  test: function (n) { return /^Door/i.test(n); } },
-    { id: 'window', label: 'Ventanas', color: '#4EB3C4', on: true,  test: function (n) { return /^Window/i.test(n); } },
-    { id: 'open',   label: 'Huecos',   color: '#9A86D4', on: true,  test: function (n) { return /^Opening/i.test(n); } },
-    { id: 'floor',  label: 'Suelos',   color: '#B0895A', on: true,  test: function (n) { return /^Floor(_|$)/i.test(n); } },
-    { id: 'ceil',   label: 'Techos',   color: '#4F6472', on: false, test: function (n) { return /^Ceiling/i.test(n); } },
+  // Clasificación de los .glb de Polycam, por el nombre que pone la app.
+  var CATS_POLYCAM = [
+    { id: 'wall',   label: 'Muros',    color: '#BFC8D2', on: true,  test: function (m) { return /^Wall_/i.test(m.name); } },
+    { id: 'joint',  label: 'Uniones',  color: '#6E7B88', on: true,  test: function (m) { return /^Joint_/i.test(m.name); } },
+    { id: 'door',   label: 'Puertas',  color: '#D98B45', on: true,  test: function (m) { return /^Door/i.test(m.name); } },
+    { id: 'window', label: 'Ventanas', color: '#4EB3C4', on: true,  test: function (m) { return /^Window/i.test(m.name); } },
+    { id: 'open',   label: 'Huecos',   color: '#9A86D4', on: true,  test: function (m) { return /^Opening/i.test(m.name); } },
+    { id: 'floor',  label: 'Suelos',   color: '#B0895A', on: true,  test: function (m) { return /^Floor(_|$)/i.test(m.name); } },
+    { id: 'ceil',   label: 'Techos',   color: '#4F6472', on: false, test: function (m) { return /^Ceiling/i.test(m.name); } },
     { id: 'obj',    label: 'Sanitarios y muebles', color: '#D4685F', on: true, test: function () { return true; } }
   ];
+
+  // Clasificación de los .ifc, por clase IFC. Un mismo hueco puede venir como
+  // IfcDoor o como IfcDoorStandardCase según quién exporte, de ahí los prefijos.
+  function esTipo(m, lista) {
+    var t = m.userData.ifc ? m.userData.ifc.tipo : '';
+    for (var i = 0; i < lista.length; i++) {
+      if (t.indexOf(lista[i]) === 0) return true;
+    }
+    return false;
+  }
+
+  var CATS_IFC = [
+    { id: 'wall',   label: 'Muros',      color: '#BFC8D2', on: true,  test: function (m) { return esTipo(m, ['IFCWALL', 'IFCCURTAINWALL', 'IFCPLATE']); } },
+    { id: 'door',   label: 'Puertas',    color: '#D98B45', on: true,  test: function (m) { return esTipo(m, ['IFCDOOR']); } },
+    { id: 'window', label: 'Ventanas',   color: '#4EB3C4', on: true,  test: function (m) { return esTipo(m, ['IFCWINDOW']); } },
+    { id: 'floor',  label: 'Forjados',   color: '#B0895A', on: true,  test: function (m) { return esTipo(m, ['IFCSLAB', 'IFCFOOTING']); } },
+    { id: 'ceil',   label: 'Acabados',   color: '#4F6472', on: false, test: function (m) { return esTipo(m, ['IFCCOVERING']); } },
+    { id: 'estr',   label: 'Estructura', color: '#8B93A1', on: true,  test: function (m) { return esTipo(m, ['IFCCOLUMN', 'IFCBEAM', 'IFCMEMBER']); } },
+    { id: 'esc',    label: 'Escaleras',  color: '#9A86D4', on: true,  test: function (m) { return esTipo(m, ['IFCSTAIR', 'IFCRAMP', 'IFCRAILING']); } },
+    { id: 'san',    label: 'Sanitarios', color: '#D4685F', on: true,  test: function (m) { return esTipo(m, ['IFCSANITARY', 'IFCFLOWTERMINAL']); } },
+    { id: 'mob',    label: 'Mobiliario', color: '#6F8F7B', on: true,  test: function (m) { return esTipo(m, ['IFCFURNI', 'IFCSYSTEMFURNITURE']); } },
+    { id: 'space',  label: 'Recintos',   color: '#3E5A66', on: false, test: function (m) { return esTipo(m, ['IFCSPACE']); } },
+    { id: 'obj',    label: 'Otros',      color: '#7C8797', on: true,  test: function () { return true; } }
+  ];
+
+  var CATS = CATS_POLYCAM;
 
   var stage = document.getElementById('stage');
   var dropzone = document.getElementById('dropzone');
@@ -85,9 +118,9 @@
 
   function set(id, html) { document.getElementById(id).innerHTML = html; }
 
-  function catDe(nombre) {
+  function catDe(malla) {
     for (var i = 0; i < CATS.length; i++) {
-      if (CATS[i].test(nombre)) return CATS[i];
+      if (CATS[i].test(malla)) return CATS[i];
     }
     return CATS[CATS.length - 1];
   }
@@ -123,7 +156,14 @@
 
   /* ---------- montaje del modelo ---------- */
 
-  function montar(root, titulo, fuente) {
+  function montar(root, titulo, fuente, origen, cats) {
+    CATS = cats || CATS_POLYCAM;
+    document.getElementById('model-origen').textContent = origen || MODELO.origen;
+    document.getElementById('mode-raw').textContent =
+      CATS === CATS_IFC ? 'Colores IFC' : 'Colores Polycam';
+    document.querySelector('.legend .eyebrow').textContent =
+      CATS === CATS_IFC ? 'Elementos del modelo' : 'Elementos del escaneo';
+
     if (current) {
       scene.remove(current);
       current.traverse(function (o) {
@@ -135,6 +175,9 @@
     }
     if (grid) scene.remove(grid);
 
+    // Se vacía entero: al pasar de Polycam a IFC cambian las categorías, y las
+    // que ya no existen dejarían dentro mallas del modelo anterior.
+    buckets = {};
     CATS.forEach(function (c) { buckets[c.id] = []; });
 
     var tris = 0;
@@ -151,7 +194,7 @@
       // Polycam exporta la malla sin normales: sin esto todo se renderiza negro.
       if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals();
 
-      var cat = catDe(o.name);
+      var cat = catDe(o);
 
       o.userData.rawMat = o.material;
       o.userData.rawMat.flatShading = true;
@@ -365,7 +408,7 @@
     var bytes = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     loader.parse(bytes.buffer, '', function (gltf) {
-      montar(gltf.scene, MODELO.titulo, MODELO.fuente);
+      montar(gltf.scene, MODELO.titulo, MODELO.fuente, MODELO.origen, CATS_POLYCAM);
     }, function (err) {
       console.error(err);
       fallo('NO SE PUDO LEER EL MODELO INCRUSTADO');
@@ -373,16 +416,69 @@
   } else {
     loader.load(
       MODELO.url,
-      function (gltf) { montar(gltf.scene, MODELO.titulo, MODELO.fuente); },
+      function (gltf) { montar(gltf.scene, MODELO.titulo, MODELO.fuente, MODELO.origen, CATS_POLYCAM); },
       null,
       function (err) {
         console.error(err);
-        fallo('NO SE PUDO CARGAR ' + MODELO.url + ' — ARRASTRA UN .GLB AQUÍ');
+        fallo('NO SE PUDO CARGAR ' + MODELO.url + ' — ABRE UN MODELO CON EL BOTÓN');
       }
     );
   }
 
-  /* ---------- arrastrar y soltar ---------- */
+  /* ---------- abrir un archivo ---------- */
+
+  function tamano(bytes) {
+    return bytes > 1048576
+      ? (bytes / 1048576).toFixed(1).replace('.', ',') + ' MB'
+      : Math.round(bytes / 1024) + ' KB';
+  }
+
+  function abrir(file) {
+    if (!file) return;
+    var nombre = file.name.replace(/\.(glb|gltf|ifc)$/i, '');
+    var pie = file.name + ' · ' + tamano(file.size);
+
+    if (/\.ifc$/i.test(file.name)) {
+      fallo('LEYENDO IFC… LA PRIMERA VEZ DESCARGA EL MOTOR (6 MB)');
+      file.arrayBuffer().then(function (buf) {
+        return window.IFC.cargar(buf);
+      }).then(function (res) {
+        if (!res.elementos) {
+          fallo('EL IFC NO TRAE GEOMETRÍA LEGIBLE');
+          return;
+        }
+        montar(res.grupo, nombre, pie, 'IFC · ' + res.elementos + ' elementos', CATS_IFC);
+      }).catch(function (err) {
+        console.error(err);
+        fallo('NO SE PUDO LEER EL IFC');
+      });
+      return;
+    }
+
+    if (!/\.(glb|gltf)$/i.test(file.name)) {
+      fallo('SOLO .IFC, .GLB O .GLTF');
+      return;
+    }
+
+    file.arrayBuffer().then(function (buf) {
+      loader.parse(buf, '', function (gltf) {
+        montar(gltf.scene, nombre, pie, 'Modelo abierto · .glb', CATS_POLYCAM);
+      }, function (err) {
+        console.error(err);
+        fallo('NO SE PUDO LEER ESE ARCHIVO');
+      });
+    });
+  }
+
+  // En el móvil no se puede arrastrar: hace falta el botón. La versión
+  // incrustada del visor no lo lleva, así que puede no existir.
+  var entrada = document.getElementById('file-modelo');
+  if (entrada) {
+    entrada.addEventListener('change', function (e) {
+      abrir(e.target.files[0]);
+      e.target.value = '';
+    });
+  }
 
   ['dragenter', 'dragover'].forEach(function (ev) {
     stage.addEventListener(ev, function (e) {
@@ -399,21 +495,7 @@
   });
 
   stage.addEventListener('drop', function (e) {
-    var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (!file) return;
-    if (!/\.(glb|gltf)$/i.test(file.name)) {
-      fallo('SOLO .GLB O .GLTF');
-      return;
-    }
-    var kb = Math.round(file.size / 1024);
-    file.arrayBuffer().then(function (buf) {
-      loader.parse(buf, '', function (gltf) {
-        montar(gltf.scene, file.name.replace(/\.(glb|gltf)$/i, ''), file.name + ' · ' + kb + ' KB');
-      }, function (err) {
-        console.error(err);
-        fallo('NO SE PUDO LEER ESE ARCHIVO');
-      });
-    });
+    abrir(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
   });
 
   /* ---------- bucle ---------- */
