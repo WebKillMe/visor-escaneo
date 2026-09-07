@@ -20,6 +20,28 @@ Además calcula del propio modelo el largo, el fondo, la altura libre y los m² 
 Arrastrando cualquier otro `.glb` o `.gltf` sobre la vista se abre en su lugar. El archivo
 se lee en el navegador con `FileReader`; no se sube a ningún servidor.
 
+## Plano: cotas, medir y tabiques
+
+La pestaña **Plano** añade tres herramientas que comparten el mismo gesto: pulsar sin
+arrastrar coloca un punto, y arrastrar sigue girando la vista, así que funciona igual con
+ratón que con el dedo.
+
+- **Cotas generales**: largo, fondo y altura libre acotados sobre el modelo.
+- **Medir**: dos puntos y la distancia. Se pega al vértice más cercano dentro de 12 cm,
+  porque medir esquinas a ojo con el dedo es imposible y las esquinas son justo lo que se
+  quiere medir. Si los dos puntos están a distinta altura también da la distancia
+  horizontal.
+- **Tabique**: dos puntos en planta y sale un tabique nuevo, con espesor y altura
+  editables. Se pega a las caras de los muros existentes dentro de 12 cm y, si no, a una
+  rejilla de 5 cm; si el trazo está casi a escuadra, se pone a escuadra.
+- **Puerta**: pulsando sobre un tabique dibujado se le abre el hueco de verdad — el
+  tabique se reconstruye en tramos con su dintel, no es una marca pintada.
+
+Los tabiques salen en color hueso para distinguirlos del escaneo, se guardan en el
+navegador y viajan en el `.glb` y en el `.csv` que se exportan desde Muebles.
+
+Las puertas solo se abren en tabiques dibujados aquí, no en los muros del escaneo.
+
 ## Muebles
 
 La pestaña **Muebles** sirve para responder a «¿esto me cabe?». Trae un catálogo de 37
@@ -93,6 +115,7 @@ index.html                     marcado
 css/style.css                  estilos
 js/app.js                      escena, clasificación y medidas
 js/ifc.js                      lectura de .ifc con web-ifc
+js/plano.js                    cotas, medición y tabiques
 js/catalogo.js                 medidas estándar del mobiliario
 js/muebles.js                  colocar, girar, imán, choques y exportar
 models/planta-2026-09-05.glb   el escaneo que se carga al abrir

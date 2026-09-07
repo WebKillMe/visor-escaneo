@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
-<link rel="stylesheet" href="css/style.css?v=8">
+<link rel="stylesheet" href="css/style.css?v=10">
 </head>
 <body>
 
@@ -29,6 +29,7 @@
 
     <nav class="tabs">
       <button class="tab" id="tab-escaneo" aria-pressed="true">Escaneo</button>
+      <button class="tab" id="tab-plano" aria-pressed="false">Plano</button>
       <button class="tab" id="tab-muebles" aria-pressed="false">Muebles</button>
     </nav>
 
@@ -56,6 +57,45 @@
       <section class="bloque rail-foot">
         <p class="note">Polycam clasifica la geometría mientras escanea: cada muro, puerta y ventana llega ya nombrado (<code>Wall_0</code>, <code>Window_3</code>…). Esa clasificación es la que colorea este visor.</p>
         <p class="note">Con <strong>Abrir modelo</strong> se cambia el escaneo por otro <code>.glb</code> de Polycam o por un <code>.ifc</code> modelado en Revit, que se clasifica por clase IFC en vez de por nombre. Nada se sube a ningún sitio: se lee en tu navegador.</p>
+      </section>
+    </div>
+
+    <!-- ---------------- plano ---------------- -->
+
+    <div class="panel" id="panel-plano" hidden>
+      <section class="bloque">
+        <div class="eyebrow">Herramientas</div>
+        <div class="pl-botones">
+          <button class="tool" id="pl-cotas" aria-pressed="false">Cotas generales</button>
+          <button class="tool" id="pl-medir" aria-pressed="false">Medir</button>
+          <button class="tool" id="pl-tabique" aria-pressed="false">Tabique</button>
+          <button class="tool" id="pl-puerta" aria-pressed="false">Puerta</button>
+          <button class="tool" id="pl-ver" aria-pressed="true">Ver</button>
+        </div>
+        <p class="note" id="pl-ayuda">Arrastrar sigue girando la vista; para colocar un punto, pulsa sin arrastrar.</p>
+        <p class="aviso" id="pl-aviso" hidden></p>
+      </section>
+
+      <section class="bloque">
+        <div class="eyebrow">Tabique nuevo</div>
+        <div class="mb-medidas">
+          <label class="mb-campo"><span>Espesor</span><input type="number" id="pl-esp" value="10" min="4" max="60" step="1"><span class="mb-u">cm</span></label>
+          <label class="mb-campo"><span>Altura</span><input type="number" id="pl-alto" value="250" min="50" max="400" step="1"><span class="mb-u">cm</span></label>
+        </div>
+        <div class="eyebrow" style="margin-top:14px">Hueco de puerta</div>
+        <div class="mb-medidas">
+          <label class="mb-campo"><span>Ancho</span><input type="number" id="pl-ancho" value="80" min="50" max="250" step="1"><span class="mb-u">cm</span></label>
+          <label class="mb-campo"><span>Altura</span><input type="number" id="pl-alto-h" value="203" min="150" max="300" step="1"><span class="mb-u">cm</span></label>
+        </div>
+      </section>
+
+      <section class="bloque">
+        <div class="eyebrow">Medido y dibujado</div>
+        <div class="pl-lista" id="pl-lista"></div>
+      </section>
+
+      <section class="bloque">
+        <p class="note">Los tabiques nuevos salen en color hueso para distinguirlos del escaneo, y van en el <strong>.glb</strong> y en el <strong>.csv</strong> que se exportan desde Muebles.</p>
       </section>
     </div>
 
@@ -142,10 +182,11 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
-<script src="js/catalogo.js?v=8"></script>
-<script src="js/ifc.js?v=8"></script>
-<script src="js/muebles.js?v=8"></script>
-<script src="js/app.js?v=8"></script>
+<script src="js/catalogo.js?v=10"></script>
+<script src="js/ifc.js?v=10"></script>
+<script src="js/plano.js?v=10"></script>
+<script src="js/muebles.js?v=10"></script>
+<script src="js/app.js?v=10"></script>
 
 </body>
 </html>

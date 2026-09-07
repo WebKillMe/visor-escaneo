@@ -369,6 +369,61 @@ h1 {
 .mb-add-real:hover { border-color: #6F8F7B; }
 .mb-add-real .mb-add-med { color: #7E9A8B; }
 
+/* ---------- plano: cotas, medidas y tabiques ---------- */
+
+.pl-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.pl-botones .tool { background: var(--void); }
+
+.pl-lista { display: flex; flex-direction: column; gap: 1px; }
+
+.pl-fila {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px 6px 8px;
+  border-radius: 3px;
+}
+
+.pl-fila:hover { background: var(--panel-2); }
+
+.pl-tipo {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.pl-val {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.pl-x {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  color: var(--dim);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pl-x:hover { background: rgba(217, 83, 79, .15); color: #E9908C; }
+.pl-x:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
 /* ---------- abrir archivos ---------- */
 
 .abrir {

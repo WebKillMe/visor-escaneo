@@ -271,11 +271,13 @@
 
     root.updateMatrixWorld(true);
     murosEnPlanta();
+    API.tam = size.clone();
 
     var l = document.getElementById('loading');
     if (l) l.remove();
     resize();
 
+    if (window.PLANO) window.PLANO.modeloNuevo();
     if (window.MUEBLES) window.MUEBLES.modeloNuevo();
   }
 
@@ -328,6 +330,7 @@
     stage: stage,
     muros: [],
     murosPoly: [],
+    tam: null,          // dimensiones del modelo, para las cotas
     modelo: function () { return current; }
   };
   window.VISOR = API;
@@ -502,15 +505,25 @@
 
   /* ---------- pestañas del panel ---------- */
 
-  function pestana(cual) {
-    document.getElementById('tab-escaneo').setAttribute('aria-pressed', String(cual === 'escaneo'));
-    document.getElementById('tab-muebles').setAttribute('aria-pressed', String(cual === 'muebles'));
-    document.getElementById('panel-escaneo').hidden = cual !== 'escaneo';
-    document.getElementById('panel-muebles').hidden = cual !== 'muebles';
-  }
-  document.getElementById('tab-escaneo').addEventListener('click', function () { pestana('escaneo'); });
-  document.getElementById('tab-muebles').addEventListener('click', function () { pestana('muebles'); });
+  var PANELES = ['escaneo', 'plano', 'muebles'];
 
+  function pestana(cual) {
+    PANELES.forEach(function (p) {
+      var t = document.getElementById('tab-' + p);
+      var d = document.getElementById('panel-' + p);
+      if (t) t.setAttribute('aria-pressed', String(cual === p));
+      if (d) d.hidden = cual !== p;
+    });
+  }
+
+  PANELES.forEach(function (p) {
+    var t = document.getElementById('tab-' + p);
+    if (t) t.addEventListener('click', function () { pestana(p); });
+  });
+
+  // PLANO antes que MUEBLES: cuando hay una herramienta de plano activa,
+  // el clic no debe además coger un mueble.
+  if (window.PLANO) window.PLANO.init(API);
   if (window.MUEBLES) window.MUEBLES.init(API);
 
   resize();

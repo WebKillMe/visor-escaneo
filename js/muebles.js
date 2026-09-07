@@ -473,6 +473,8 @@
 
   function onDown(ev) {
     if (!grupo.visible || ev.button === 2) return;
+    // Con una herramienta del plano activa, el clic es para ella.
+    if (window.PLANO && window.PLANO.activo()) return;
     ndc(ev);
     ray.setFromCamera(puntero, V.camera);
     var hits = ray.intersectObjects(piezas, true);
@@ -594,11 +596,32 @@
   }
 
   function exportarCSV() {
-    var filas = [['pieza', 'ancho_cm', 'fondo_cm', 'alto_cm', 'base_cm', 'x_m', 'z_m', 'rotacion_grados']];
+    var filas = [['tipo', 'pieza', 'ancho_cm', 'fondo_cm', 'alto_cm', 'base_cm', 'x_m', 'z_m', 'rotacion_grados']];
     piezas.forEach(function (m) {
       var e = m.userData.es;
-      filas.push([e.nombre, e.w, e.d, e.h, e.base, e.x.toFixed(3), e.z.toFixed(3), Math.round(e.rot)]);
+      filas.push(['mueble', e.nombre, e.w, e.d, e.h, e.base, e.x.toFixed(3), e.z.toFixed(3), Math.round(e.rot)]);
     });
+
+    // Los tabiques dibujados y las medidas van en el mismo listado.
+    if (window.PLANO) {
+      window.PLANO.tabiques().forEach(function (t) {
+        var largo = Math.sqrt(Math.pow(t.x2 - t.x1, 2) + Math.pow(t.z2 - t.z1, 2));
+        var ang = Math.atan2(t.z2 - t.z1, t.x2 - t.x1) * 180 / Math.PI;
+        filas.push(['tabique', 'Tabique nuevo', Math.round(largo * 100), t.esp, t.alto, 0,
+          ((t.x1 + t.x2) / 2).toFixed(3), ((t.z1 + t.z2) / 2).toFixed(3), Math.round(ang)]);
+        (t.huecos || []).forEach(function (h) {
+          var ang2 = Math.atan2(t.z2 - t.z1, t.x2 - t.x1);
+          filas.push(['hueco', 'Puerta en tabique', h.ancho, t.esp, h.alto, 0,
+            (t.x1 + Math.cos(ang2) * h.t).toFixed(3),
+            (t.z1 + Math.sin(ang2) * h.t).toFixed(3), Math.round(ang)]);
+        });
+      });
+
+      window.PLANO.medidas().forEach(function (m) {
+        filas.push(['medida', 'Medida', Math.round(m.d * 100), '', '', '',
+          ((m.a[0] + m.b[0]) / 2).toFixed(3), ((m.a[2] + m.b[2]) / 2).toFixed(3), '']);
+      });
+    }
     var csv = filas.map(function (f) {
       return f.map(function (c) {
         return /[";,\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c;
@@ -616,6 +639,7 @@
     btn.textContent = 'Exportando…';
 
     var lista = [grupo];
+    if (window.PLANO) lista.unshift(window.PLANO.grupo());
     if (V.modelo()) lista.unshift(V.modelo());
 
     new THREE.GLTFExporter().parse(lista, function (res) {
