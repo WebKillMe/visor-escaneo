@@ -139,6 +139,7 @@
         var h = ray.intersectObject(modelo, true);
         if (h.length) return ajustarAVertice(h[0]);
       }
+      gObra.updateMatrixWorld(true);
       var obra = ray.intersectObjects(gObra.children, true);
       if (obra.length) return obra[0].point.clone();
     }
@@ -369,6 +370,9 @@
   function abrirHueco(ev) {
     ndc(ev);
     ray.setFromCamera(puntero, V.camera);
+    // Un tabique recién dibujado todavía no ha pasado por un fotograma, así que
+    // su matrixWorld está sin calcular y el rayo no lo encontraría.
+    gObra.updateMatrixWorld(true);
     var hits = ray.intersectObjects(gObra.children, true);
     var aviso = document.getElementById('pl-aviso');
 
